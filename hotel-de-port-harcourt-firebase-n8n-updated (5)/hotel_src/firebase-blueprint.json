@@ -1,0 +1,34 @@
+{
+  "entities": {
+    "Booking": {
+      "title": "Booking",
+      "description": "Hotel reservation details",
+      "type": "object",
+      "properties": {
+        "bookingId": { "type": "string", "pattern": "^HDPH-[A-Z0-9-]+$" },
+        "fullName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string", "minLength": 8, "maxLength": 20 },
+        "checkIn": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "checkOut": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "roomType": { "type": "string", "enum": ["Deluxe Room", "Executive Suite", "Presidential Suite"] },
+        "roomNumber": { "type": "string", "maxLength": 10 },
+        "guests": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "specialRequest": { "type": "string", "maxLength": 500 },
+        "nights": { "type": "integer", "minimum": 1 },
+        "totalAmount": { "type": "number", "minimum": 0 },
+        "status": { "type": "string", "enum": ["Pending", "Confirmed", "Checked-in", "Checked-out", "Cancelled"] },
+        "paymentStatus": { "type": "string", "enum": ["Paid", "Pending", "Unconfirmed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128 }
+      },
+      "required": ["bookingId", "fullName", "email", "phone", "checkIn", "checkOut", "roomType", "guests", "nights", "totalAmount", "status", "paymentStatus", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Guest reservations"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Hotel De Port Harcourt - 5-Star Luxury Hotel & Staff Admin",
+  "description": "5-star luxury hotel in GRA Phase 2, Port Harcourt, Rivers State, Nigeria. Includes public reservations, guest services, in-room QR maintenance, and full staff operations admin panel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,167 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function verifiedAdmin() {
+      return signedIn()
+        && request.auth.token.email == 'uchechukwusandra0@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+    function validId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128
+        && id.matches('^[a-zA-Z0-9_-]+$');
+    }
+    function validBookingCreate() {
+      return request.resource.data.keys().hasAll([
+          'bookingId', 'fullName', 'email', 'phone', 'checkIn', 'checkOut',
+          'roomType', 'guests', 'nights', 'totalAmount', 'status',
+          'paymentStatus', 'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'bookingId', 'fullName', 'email', 'phone', 'checkIn', 'checkOut',
+          'roomType', 'roomNumber', 'guests', 'specialRequest', 'nights',
+          'totalAmount', 'status', 'paymentStatus', 'createdAt', 'userId'
+        ])
+        && request.resource.data.bookingId is string
+        && validId(request.resource.data.bookingId)
+        && request.resource.data.fullName is string
+        && request.resource.data.fullName.size() >= 2
+        && request.resource.data.fullName.size() <= 120
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() <= 32
+        && request.resource.data.checkIn is string
+        && request.resource.data.checkOut is string
+        && request.resource.data.roomType in ['Deluxe Room', 'Executive Suite', 'Presidential Suite']
+        && request.resource.data.guests is int
+        && request.resource.data.guests >= 1
+        && request.resource.data.guests <= 12
+        && request.resource.data.nights is int
+        && request.resource.data.nights >= 1
+        && request.resource.data.nights <= 365
+        && request.resource.data.totalAmount is number
+        && request.resource.data.totalAmount >= 0
+        && request.resource.data.status == 'Pending'
+        && request.resource.data.paymentStatus == 'Pending'
+        && request.resource.data.createdAt is string
+        && (!('userId' in request.resource.data)
+          || (signedIn() && request.resource.data.userId == request.auth.uid));
+    }
+    function validAbandonedCreate() {
+      return request.resource.data.keys().hasAll([
+          'id', 'bookingId', 'fullName', 'email', 'phone', 'roomType',
+          'totalAmount', 'startedAt', 'lastActivity', 'status', 'remindersSent'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'id', 'bookingId', 'fullName', 'email', 'phone', 'roomType',
+          'totalAmount', 'startedAt', 'lastActivity', 'status', 'remindersSent'
+        ])
+        && request.resource.data.id is string
+        && validId(request.resource.data.id)
+        && request.resource.data.bookingId is string
+        && validId(request.resource.data.bookingId)
+        && request.resource.data.fullName is string
+        && request.resource.data.fullName.size() <= 120
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() <= 32
+        && request.resource.data.roomType in ['Deluxe Room', 'Executive Suite', 'Presidential Suite']
+        && request.resource.data.totalAmount is number
+        && request.resource.data.totalAmount >= 0
+        && request.resource.data.startedAt is string
+        && request.resource.data.lastActivity is string
+        && request.resource.data.status == 'Pending'
+        && request.resource.data.remindersSent == 0;
+    }
+    function validEnquiryCreate() {
+      return request.resource.data.keys().hasAll([
+          'enquiryId', 'guestName', 'contact', 'channel', 'question',
+          'botAnswer', 'status', 'timestamp'
+        ])
+        && request.resource.data.guestName is string
+        && request.resource.data.guestName.size() <= 120
+        && request.resource.data.contact is string
+        && request.resource.data.contact.size() <= 254
+        && request.resource.data.channel in ['WhatsApp', 'Website']
+        && request.resource.data.question is string
+        && request.resource.data.question.size() <= 4000
+        && request.resource.data.botAnswer is string
+        && request.resource.data.botAnswer.size() <= 8000
+        && request.resource.data.status in ['Answered by bot', 'Escalated'];
+    }
+    function validMaintenanceCreate() {
+      return request.resource.data.keys().hasAll([
+          'ticketId', 'room', 'issueType', 'priority', 'description',
+          'reportedBy', 'status', 'reportedAt'
+        ])
+        && request.resource.data.room is string
+        && request.resource.data.room.size() <= 32
+        && request.resource.data.issueType in ['AC not working', 'Plumbing', 'Broken TV', 'Electrical', 'Cleaning', 'Other']
+        && request.resource.data.priority in ['High', 'Medium', 'Low']
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 3000
+        && request.resource.data.reportedBy in ['guest', 'staff']
+        && request.resource.data.status == 'Open';
+    }
+    function validReviewCreate() {
+      return request.resource.data.keys().hasAll([
+          'reviewId', 'guestName', 'rating', 'comment', 'source', 'date', 'submittedAt'
+        ])
+        && request.resource.data.guestName is string
+        && request.resource.data.guestName.size() <= 120
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.comment is string
+        && request.resource.data.comment.size() <= 3000
+        && request.resource.data.source == 'Website';
+    }
+
+    // Guest bookings: anyone can submit a validated request. Only the owner or
+    // verified admin can read; only the verified admin can change booking status.
+    match /bookings/{bookingId} {
+      allow create: if validBookingCreate() && bookingId == request.resource.data.bookingId;
+      allow read: if verifiedAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow update, delete: if verifiedAdmin();
+    }
+
+    // Abandoned leads can be created by the booking form. Only staff can view or
+    // update them. Reminder delivery/status changes should originate from trusted n8n/server code.
+    match /hdph_abandoned/{leadId} {
+      allow create: if validAbandonedCreate() && leadId == request.resource.data.id;
+      allow read, update, delete: if verifiedAdmin();
+    }
+
+    match /hdph_enquiries/{enquiryId} {
+      allow create: if validEnquiryCreate();
+      allow read, update, delete: if verifiedAdmin();
+    }
+
+    match /hdph_maintenance/{ticketId} {
+      allow create: if validMaintenanceCreate();
+      allow read, update, delete: if verifiedAdmin();
+    }
+
+    match /hdph_reviews/{reviewId} {
+      allow create: if validReviewCreate();
+      allow read, update, delete: if verifiedAdmin();
+    }
+
+    match /hdph_payments/{paymentId} {
+      // Payment records and payment status must be created/changed by trusted server code.
+      allow read: if verifiedAdmin();
+      allow create, update, delete: if verifiedAdmin();
+    }
+
+    match /hdph_reports/{reportId} {
+      allow read, write: if verifiedAdmin();
+    }
+
+    // Room inventory and any future collections are denied until explicit rules are added.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
